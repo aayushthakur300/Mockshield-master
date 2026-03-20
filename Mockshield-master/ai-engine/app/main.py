@@ -38,15 +38,21 @@ except ImportError as e:
 app = FastAPI()
 
 # Enable CORS for Frontend (Port 5173)
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=["*"], #Keep this as "*" for the initial deployment
+#     allow_methods=["*"],
+#     allow_headers=["*"],
+#     # allow_credentials=True,
+#     allow_credentials=False, # 
+# )
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], #Keep this as "*" for the initial deployment
+    allow_origins=["https://mockshield-20.vercel.app"], # YOUR EXACT VERCEL URL
+    allow_credentials=True, # NOW SAFE TO BE TRUE
     allow_methods=["*"],
     allow_headers=["*"],
-    # allow_credentials=True,
-    allow_credentials=False, # 
 )
-
 # ==========================================
 #  DATABASE UTILS (JSON FILE)
 # ==========================================
