@@ -319,3 +319,36 @@ pytest tests/
   * Async DB writes
 
 ---
+
+# 📡 AI Engine API Reference
+
+Method	Endpoint	Description
+
+# POST	/generate	Generate mock interview questions
+# POST	/evaluate_session	Evaluate technical transcript
+# POST	/generate_resume_questions	Initialize resume audit
+# POST	/evaluate_resume_session	Resume-linked transcript evaluation
+# POST	/chat	Context-aware follow-up interaction
+# GET	/interviews	Retrieve saved sessions
+# POST	/interviews	Persist completed session
+# DELETE	/interviews/{id}	Delete specific session
+# DELETE	/api/sessions/clear	Clear all user sessions
+
+
+All endpoints enforce structured JSON schema validation.
+
+
+---
+
+### 📐 Engineering Principles
+
+Deterministic AI output handling
+
+Production-grade failover design
+
+Microservice isolation
+
+Structured persistence strategy
+
+Defensive JSON validation
+
