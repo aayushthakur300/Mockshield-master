@@ -5,12 +5,6 @@ Engineered with deterministic browser-based proctoring telemetry and a highly fa
 
 ---
 
-## 📸 System Architecture
-
-![System Architecture](sandbox:/mnt/data/1097740e-2d98-47ed-a644-a481858fcccb.png)
-
----
-
 ## 🔗 Live Link
 
 **Status:** In Development
@@ -55,11 +49,6 @@ Architected adhering to strict **Domain-Driven Design (DDD)** principles within 
 
 ## 🧠 System Architecture
 
-## 🧠 System Architecture
-
-<div align="center">
-  <img src="assets/architecture.jpeg" alt="MockShield System Architecture Diagram" width="100%">
-</div>
 
 ![architecture](https://github.com/user-attachments/assets/d7ef68fa-bc27-449c-9dbe-8fb36494a5c6)
 
