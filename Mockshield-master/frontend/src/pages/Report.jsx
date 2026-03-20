@@ -72,6 +72,21 @@ const Report = () => {
   };
 
   // --- HELPER: PDF TEXT FORMATTER ---
+//   const formatTextForPDF = (text) => {
+//     if (!text) return "N/A";
+
+//     let safeText = text;
+//     if (Array.isArray(text)) safeText = text.join('\n');
+//     else if (typeof text === 'object') safeText = JSON.stringify(text);
+//     else safeText = String(text);
+
+//     const items = safeText.split('\n').filter(item => item.trim() !== '');
+//     if (items.length > 1) {
+//       return items.map(item => `• ${item.replace(/^[-*•]\s*/, '')}`).join('\n');
+//     }
+//     return safeText;
+//   };
+// --- HELPER: PDF TEXT FORMATTER ---
   const formatTextForPDF = (text) => {
     if (!text) return "N/A";
 
@@ -80,13 +95,15 @@ const Report = () => {
     else if (typeof text === 'object') safeText = JSON.stringify(text);
     else safeText = String(text);
 
+    // 🔥 FIX: Strip Emojis (like ⚠️) that break jsPDF boundary calculations
+    safeText = safeText.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{26A0}\u{FE0F}]/gu, '');
+
     const items = safeText.split('\n').filter(item => item.trim() !== '');
     if (items.length > 1) {
       return items.map(item => `• ${item.replace(/^[-*•]\s*/, '')}`).join('\n');
     }
     return safeText;
   };
-
   // --- 2. FORENSIC DATA RECONCILER (ABSOLUTE MERGE PROTOCOL) ---
   const processedData = useMemo(() => {
     // Determine the max size of our arrays to make sure we drop NOTHING.
@@ -143,29 +160,31 @@ const Report = () => {
       return false;
     };
 
-    // --- TRUNCATION FIX: DYNAMIC LINE-BY-LINE WRAPPER ---
-    const addWrappedText = (text, fontSize = 11, fontType = 'normal', color = [60, 60, 60]) => {
-        doc.setFontSize(fontSize);
-        doc.setFont('helvetica', fontType);
-        doc.setTextColor(...color);
-        
-        const lines = doc.splitTextToSize(text || "N/A", contentWidth - 10);
-        const lineHeight = fontSize * 0.4 * 1.5; // 1.5 spacing multiplier
-        
-        // Check page break PER LINE so nothing ever gets cut off at the bottom
-        lines.forEach(line => {
-            if (checkPageBreak(lineHeight)) {
-                // Re-apply styles after a page break
-                doc.setFontSize(fontSize);
-                doc.setFont('helvetica', fontType);
-                doc.setTextColor(...color);
-            }
-            doc.text(line, margin + 5, cursorY);
-            cursorY += lineHeight;
-        });
-        cursorY += 2; // Bottom padding for block
-    };
-
+    // // --- TRUNCATION FIX: DYNAMIC LINE-BY-LINE WRAPPER ---
+  const addWrappedText = (text, fontSize = 11, fontType = 'normal', color = [60, 60, 60]) => {
+      doc.setFontSize(fontSize);
+      doc.setFont('helvetica', fontType);
+      doc.setTextColor(...color);
+      
+      // 🔥 FIX: Strip Emojis here as well
+      const safeText = String(text || "N/A").replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{26A0}\u{FE0F}]/gu, '');
+      
+      const lines = doc.splitTextToSize(safeText, contentWidth - 10);
+      const lineHeight = fontSize * 0.4 * 1.5; // 1.5 spacing multiplier
+      
+      // Check page break PER LINE so nothing ever gets cut off at the bottom
+      lines.forEach(line => {
+          if (checkPageBreak(lineHeight)) {
+              // Re-apply styles after a page break
+              doc.setFontSize(fontSize);
+              doc.setFont('helvetica', fontType);
+              doc.setTextColor(...color);
+          }
+          doc.text(line, margin + 5, cursorY);
+          cursorY += lineHeight;
+      });
+      cursorY += 2; // Bottom padding for block
+  };
     // --- PAGE 1: EXECUTIVE SUMMARY ---
     drawPageBorder();
 
