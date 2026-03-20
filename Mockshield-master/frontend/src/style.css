@@ -1,0 +1,269 @@
+/* =========================================
+   1. FONTS & IMPORTS
+   ========================================= */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Montserrat:wght@400;500;600;700;800;900&display=swap');
+
+/* =========================================
+   2. THEME VARIABLES (STERILE DANGER MODE)
+   ========================================= */
+:root {
+    /* Base Colors - Clinical White */
+    --bg-main: #ffffff;
+    --bg-secondary: #f8fafc; /* Slate-50 */
+    --bg-panel: rgba(255, 255, 255, 0.95);
+    
+    /* Typography - Stark Black */
+    --text-primary: #0f172a; /* Slate-900 */
+    --text-secondary: #475569; /* Slate-600 */
+    --text-code: #334155;
+    
+    /* The "Danger" Accent - International Alert Red */
+    --accent: #dc2626;       /* Red-600 */
+    --accent-hover: #b91c1c; /* Red-700 */
+    --accent-subtle: rgba(220, 38, 38, 0.08);
+    --border-danger: rgba(220, 38, 38, 0.3);
+    
+    /* UI Elements */
+    --shadow-sharp: 4px 4px 0px rgba(0, 0, 0, 1); /* Neo-Brutalism Shadow */
+    --shadow-red: 4px 4px 0px var(--accent);
+    --radius-sm: 4px;
+    --radius-md: 8px;
+}
+
+/* =========================================
+   3. GLOBAL RESETS & TYPOGRAPHY
+   ========================================= */
+* {
+    box-sizing: border-box;
+}
+
+::selection {
+    background: var(--accent);
+    color: white;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    font-family: 'Montserrat', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+    line-height: 1.6;
+}
+
+/* Custom Scrollbar - The "Red Line" */
+::-webkit-scrollbar {
+    width: 8px;
+}
+::-webkit-scrollbar-track {
+    background: #e2e8f0;
+}
+::-webkit-scrollbar-thumb {
+    background: var(--accent);
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-hover);
+}
+
+/* =========================================
+   4. BACKGROUND VISUALS ("Technical Grid")
+   ========================================= */
+.danger-grid {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: -1;
+    background-color: var(--bg-main);
+    /* A precise technical grid */
+    background-image: 
+        linear-gradient(var(--border-danger) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border-danger) 1px, transparent 1px);
+    background-size: 50px 50px;
+    /* Fade out edges for focus */
+    mask-image: radial-gradient(circle at center, black 60%, transparent 100%);
+    -webkit-mask-image: radial-gradient(circle at center, black 60%, transparent 100%);
+    opacity: 0.4;
+    pointer-events: none;
+}
+
+/* =========================================
+   5. COMPONENT: BUTTONS ("The Trigger")
+   ========================================= */
+button, .btn {
+    font-family: 'JetBrains Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Primary Action Button (Red) */
+.btn-primary {
+    background-color: var(--accent);
+    color: white;
+    border: 2px solid var(--accent);
+    box-shadow: var(--shadow-sharp);
+    font-weight: 800;
+}
+
+.btn-primary:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0px rgba(0,0,0,1);
+    background-color: var(--accent-hover);
+}
+
+.btn-primary:active {
+    transform: translate(2px, 2px);
+    box-shadow: 0px 0px 0px rgba(0,0,0,1);
+}
+
+/* Secondary Button (Outline) */
+.btn-secondary {
+    background-color: white;
+    color: var(--text-primary);
+    border: 2px solid var(--text-primary);
+    box-shadow: var(--shadow-sharp);
+    font-weight: 700;
+}
+
+.btn-secondary:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 5px 5px 0px var(--accent);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+/* =========================================
+   6. COMPONENT: CARDS ("The Dossier")
+   ========================================= */
+.card-panel {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-left: 4px solid var(--accent); /* Dangerous Red Strike */
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    border-radius: var(--radius-md);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-panel:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(220, 38, 38, 0.1);
+    border-color: var(--accent);
+}
+
+/* =========================================
+   7. COMPONENT: INPUTS ("Data Entry")
+   ========================================= */
+input, select, textarea {
+    font-family: 'Montserrat', sans-serif;
+    background-color: #ffffff;
+    border: 2px solid #e2e8f0;
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    transition: all 0.2s ease;
+    font-weight: 600;
+}
+
+input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    background-color: #fffafa; /* Very subtle red tint */
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* =========================================
+   8. TYPOGRAPHY & EFFECTS
+   ========================================= */
+h1, h2, h3, h4, h5, h6 {
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+}
+
+/* The Glitch/Alert Text Effect */
+.text-danger {
+    color: var(--accent);
+    position: relative;
+    display: inline-block;
+}
+
+.text-danger::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 3px;
+    bottom: 2px;
+    left: 0;
+    background-color: var(--accent);
+    opacity: 0.3;
+}
+
+.mono-font {
+    font-family: 'JetBrains Mono', monospace;
+}
+
+/* =========================================
+   9. LAYOUT UTILITIES
+   ========================================= */
+.nav-glass {
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(8px);
+    border-bottom: 2px solid #f1f5f9;
+}
+
+.container-tight {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+}
+
+/* Pulse Animation for Status Dots */
+@keyframes pulse-red {
+    0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(220, 38, 38, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+}
+
+.status-dot {
+    width: 10px;
+    height: 10px;
+    background-color: var(--accent);
+    border-radius: 50%;
+    display: inline-block;
+    animation: pulse-red 2s infinite;
+}
+
+/* =========================================
+   10. INTERVIEW SPECIFIC (Chat Bubbles)
+   ========================================= */
+.bubble-user {
+    background-color: #f1f5f9;
+    color: var(--text-primary);
+    border-radius: 12px 12px 0 12px;
+    border: 1px solid #e2e8f0;
+    font-weight: 500;
+}
+
+.bubble-ai {
+    background-color: #fef2f2; /* Light Red tint */
+    color: var(--text-primary);
+    border-radius: 12px 12px 12px 0;
+    border-left: 3px solid var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+}

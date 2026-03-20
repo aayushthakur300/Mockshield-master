@@ -1,0 +1,68 @@
+# =========================
+# PYTHON / FASTAPI (BACKEND)
+# =========================
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environments
+venv/
+.venv/
+env/
+.env/
+
+# Local Databases & Logs
+*.sqlite3
+*.db
+resume_evaluator_history.db
+db.json
+system_audit.log
+
+# =========================
+# NODE / REACT / VITE (FRONTEND)
+# =========================
+node_modules/
+dist/
+dist-ssr/
+*.local
+.npm/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# =========================
+# ENVIRONMENT VARIABLES (CRITICAL)
+# =========================
+.env
+.env.*
+!.env.example
+
+# =========================
+# OS & IDE FILES
+# =========================
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp

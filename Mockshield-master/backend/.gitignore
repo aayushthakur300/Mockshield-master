@@ -1,0 +1,10 @@
+# Environments
+.env
+.env.*
+!.env.example
+
+# Node modules (since it looks like your Node backend)
+node_modules/
+
+# Logs
+*.log
