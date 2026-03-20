@@ -38,7 +38,7 @@ app.use(express.json());
 // 3. Strict CORS Configuration (Vercel <-> Render)
 app.use(cors({
   origin: [
-    'https://mockshield.vercel.app', // <-- YOUR EXACT VERCEL URL
+    'https://mockshield-20.vercel.app', // <-- YOUR EXACT VERCEL URL
     'http://localhost:5173',         // Local Vite dev
     'http://localhost:3000'          // Local standard React
   ],
