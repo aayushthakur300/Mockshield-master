@@ -1,14 +1,43 @@
-# MockShield
+### 📌 Overview
 
-**An enterprise-grade, forensic technical assessment and ATS (Applicant Tracking System) integration platform.**
-Engineered with deterministic browser-based proctoring telemetry and a highly fault-tolerant, multi-model Large Language Model (LLM) orchestration engine for automated candidate evaluation.
+MockShield AI is a distributed technical assessment system designed to conduct structured mock interviews and resume-based forensic evaluations.
+
+The platform integrates:
+
+ 🧠 Multi-tier large language model routing
+
+🧩 Deterministic JSON schema enforcement
+
+🗄 PostgreSQL-based persistent storage
+
+🔁 Automated failover handling
+
+🏗 Domain-specific interview simulation logic
+
+
+The architecture prioritizes reliability, structured AI output handling, and production-level resilience.
+
 
 ---
 
-## 🔗 Live Link
+## 🌐  Live Link
 
-**Status:** In Development
-*(Replace with deployed URL when available)*
+# ⏳ Service Initialization Instructions (Render Cold Start)
+
+# Due to cold start behavior on hosted backend services:
+
+# 1️⃣ Open the backend services first:
+
+# Main Backend: https://mockshield-ai-engine.onrender.com
+
+# Node Backend: https://mockshield-master-node.onrender.com
+
+
+# 2️⃣ Wait approximately 50 seconds until both services indicate active or running status.
+
+# 3️⃣ Then open the frontend:
+
+# Frontend: https://mockshield-20.vercel.app
 
 ---
 
