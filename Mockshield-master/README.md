@@ -61,6 +61,7 @@ Architected adhering to strict **Domain-Driven Design (DDD)** principles within 
   <img src="assets/architecture.jpeg" alt="MockShield System Architecture Diagram" width="100%">
 </div>
 
+![architecture](https://github.com/user-attachments/assets/d7ef68fa-bc27-449c-9dbe-8fb36494a5c6)
 
 ### Data Flow Pipeline
 
