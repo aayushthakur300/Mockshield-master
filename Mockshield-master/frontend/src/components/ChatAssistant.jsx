@@ -49,18 +49,29 @@ const ChatAssistant = () => {
     setInput("");
     setIsTyping(true);
 
+    // try {
+    //     // ⚠️ CRITICAL CHANGE: Use LOCALHOST to see the terminal logs in VS Code!
+    //     // Once everything works perfectly, you can change this back to your onrender URL.
+    //     const res = await axios.post('http://localhost:8000/chat', { 
+    //         message: userText,
+    //         context: { 
+    //             page: location.pathname === '/resume-report' ? "Resume Report" : "Interview Report", 
+    //             topic: topic,  // Extracted securely above
+    //             score: score   // Extracted securely above
+    //         } 
+    //     });
     try {
-        // ⚠️ CRITICAL CHANGE: Use LOCALHOST to see the terminal logs in VS Code!
-        // Once everything works perfectly, you can change this back to your onrender URL.
-        const res = await axios.post('http://localhost:8000/chat', { 
+        // FIXED: Now using the dynamic Vercel/Render URL for the AI Engine
+        const AI_URL = import.meta.env.VITE_PYTHON_API_URL || 'http://localhost:8000';
+        
+        const res = await axios.post(`${AI_URL}/chat`, { 
             message: userText,
             context: { 
                 page: location.pathname === '/resume-report' ? "Resume Report" : "Interview Report", 
-                topic: topic,  // Extracted securely above
-                score: score   // Extracted securely above
+                topic: topic,  
+                score: score   
             } 
         });
-
         setMessages(prev => [...prev, { role: 'ai', text: res.data.reply }]);
     } catch (error) {
         console.error("Chat Error:", error);

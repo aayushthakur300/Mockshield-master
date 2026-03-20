@@ -19,7 +19,6 @@ const NODE_API = import.meta.env.VITE_NODE_API_URL || 'http://localhost:5000/api
 export const generateQuestions = (config) => {
     return axios.post(`${PYTHON_API}/generate`, config);
 };
-
 // Resume Analysis Questions
 export const generateResumeQuestions = (resumeText, domain, yoe, count) => {
     return axios.post(`${PYTHON_API}/generate_resume_questions`, {
@@ -92,8 +91,8 @@ export const logUserAction = async (data) => {
 // ==========================================
 export const submitFeedback = async (feedbackData) => {
     try {
-        // Change to your production URL later if needed
-        const response = await axios.post('http://localhost:8000/feedback', feedbackData);
+        // FIXED: Now using the dynamic Vercel/Render URL
+        const response = await axios.post(`${PYTHON_API}/feedback`, feedbackData);
         console.log("✅ [API] Feedback submitted successfully");
         return response.data;
     } catch (error) {
