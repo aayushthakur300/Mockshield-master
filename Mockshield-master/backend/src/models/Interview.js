@@ -39,11 +39,7 @@ const Interview = sequelize.define('Interview', {
     autoIncrement: true,
     primaryKey: true
   },
-  // 👇 THE NEW TOPIC COLUMN 👇
-  topic: {
-    type: DataTypes.STRING,
-    defaultValue: 'General' // If no topic is sent, it defaults to 'General'
-  },
+  // We store the list of questions/answers as a JSON object in Postgres
   questions_data: {
     type: DataTypes.JSONB, 
     allowNull: false
@@ -56,9 +52,10 @@ const Interview = sequelize.define('Interview', {
     type: DataTypes.FLOAT,
     defaultValue: 0.0
   }
-}, {
-  timestamps: true // Adds createdAt and updatedAt automatically
 });
+
 // Setup Relationship
+User.hasMany(Interview, { foreignKey: 'userId' });
+Interview.belongsTo(User, { foreignKey: 'userId' });
 
 module.exports = Interview;
