@@ -68,18 +68,21 @@ const cors = require('cors');
 const errorLogger = require('./middleware/errorLogger');
 require('dotenv').config();
 
-// 🔥 CRITICAL FIX: Load the model BEFORE syncing the database 🔥
+// 1. 🔥 CRITICAL: Load the Interview model immediately
+// This ensures Sequelize knows the table structure before we run connectDB()
 require('./models/Interview');
 
 const app = express();
 
-// 1. Connect to Database (This will now correctly see the Interview model)
+// 2. Connect to Neon PostgreSQL
+// This will run 'sequelize.sync({ alter: true })' from your config/db.js
 connectDB();
 
-// 2. Body Parser Middleware
+// 3. Body Parser Middleware
 app.use(express.json());
 
-// 3. Strict CORS Configuration
+// 4. Strict CORS Configuration
+// This allows your local Vite (5173) and your production Vercel to talk to this server
 app.use(cors({
   origin: [
     'https://mockshield-20.vercel.app', 
@@ -90,17 +93,25 @@ app.use(cors({
   credentials: true                  
 }));
 
-// 4. Health Check Route
+// 5. Health Check Route
+// If you see this in your browser, your server is officially awake
 app.get('/', (req, res) => {
-  res.send('Mockshield Node API is running! 🚀');
+  res.send('🚀 Mockshield Node API is Live and Connected to Neon!');
 });
 
-// 5. Routes
+// 6. Register Interview Routes
+// All database calls will start with /api/interview
 app.use('/api/interview', require('./routes/interview.routes'));
 
-// 6. REGISTER SILENT KILLER 
+// 7. Error Logger (The Silent Killer Detector)
+// This MUST be the last middleware to catch any server crashes
 app.use(errorLogger);
 
-// 7. Start Server
+// 8. Start the Server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+app.listen(PORT, () => {
+    console.log(`--------------------------------------------------`);
+    console.log(`🚀 SERVER RUNNING ON PORT: ${PORT}`);
+    console.log(`📡 API ENDPOINT: http://localhost:${PORT}/api/interview`);
+    console.log(`--------------------------------------------------`);
+});

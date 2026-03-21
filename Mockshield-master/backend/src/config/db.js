@@ -30,9 +30,10 @@
 const { Sequelize } = require('sequelize');
 require('dotenv').config();
 
+// Initialize Sequelize with Neon PostgreSQL credentials
 const sequelize = new Sequelize(process.env.DATABASE_URL, {
   dialect: 'postgres',
-  logging: false,
+  logging: false, // Set to console.log to see raw SQL queries
   dialectOptions: {
     ssl: {
       require: true,
@@ -50,12 +51,14 @@ const sequelize = new Sequelize(process.env.DATABASE_URL, {
 
 const connectDB = async () => {
   try {
+    // Test the connection
     await sequelize.authenticate();
     console.log('✅ Neon PostgreSQL Connected Successfully.');
     
-    // 🔥 NUCLEAR OPTION: Now that the model is loaded, this will properly destroy and rebuild the table 🔥
-    await sequelize.sync({ force: true }); 
-    console.log('✅ Database Schema FORCE Synced & Rebuilt.');
+    // 🛡️ SAFE MODE: Use 'alter' to update columns without deleting interviews.
+    // This fixes the "0 interviews" problem caused by 'force: true'.
+    await sequelize.sync({ alter: true }); 
+    console.log('✅ Database Schema Synced & Data Preserved.');
     
   } catch (error) {
     console.error('❌ Unable to connect to Neon PostgreSQL:', error);

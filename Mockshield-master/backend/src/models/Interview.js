@@ -56,8 +56,9 @@ const Interview = sequelize.define('Interview', {
     type: DataTypes.FLOAT,
     defaultValue: 0.0
   }
+}, {
+  timestamps: true // Adds createdAt and updatedAt automatically
 });
-
 // Setup Relationship
 
 module.exports = Interview;
