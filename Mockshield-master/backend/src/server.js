@@ -68,35 +68,37 @@ const cors = require('cors');
 const errorLogger = require('./middleware/errorLogger');
 require('dotenv').config();
 
+// 🔥 CRITICAL FIX: Load the model BEFORE syncing the database 🔥
+require('./models/Interview');
+
 const app = express();
 
-// 1. Connect to Database
+// 1. Connect to Database (This will now correctly see the Interview model)
 connectDB();
 
 // 2. Body Parser Middleware
 app.use(express.json());
 
-// 3. Strict CORS Configuration (Vercel <-> Render)
+// 3. Strict CORS Configuration
 app.use(cors({
   origin: [
-    'https://mockshield-20.vercel.app', // <-- YOUR EXACT VERCEL URL
-    'http://localhost:5173',         // Local Vite dev
-    'http://localhost:3000'          // Local standard React
+    'https://mockshield-20.vercel.app', 
+    'http://localhost:5173',         
+    'http://localhost:3000'          
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  credentials: true                  // Required for auth tokens/cookies
+  credentials: true                  
 }));
 
-// 4. Health Check Route (Fixes the "Cannot GET /" error)
+// 4. Health Check Route
 app.get('/', (req, res) => {
   res.send('Mockshield Node API is running! 🚀');
 });
 
 // 5. Routes
-
 app.use('/api/interview', require('./routes/interview.routes'));
 
-// 6. REGISTER SILENT KILLER (Must be last)
+// 6. REGISTER SILENT KILLER 
 app.use(errorLogger);
 
 // 7. Start Server

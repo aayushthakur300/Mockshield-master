@@ -53,7 +53,7 @@ const connectDB = async () => {
     await sequelize.authenticate();
     console.log('✅ Neon PostgreSQL Connected Successfully.');
     
-    // 🔥 NUCLEAR OPTION: THIS COMMAND DELETES THE CORRUPTED TABLE AND REBUILDS IT 🔥
+    // 🔥 NUCLEAR OPTION: Now that the model is loaded, this will properly destroy and rebuild the table 🔥
     await sequelize.sync({ force: true }); 
     console.log('✅ Database Schema FORCE Synced & Rebuilt.');
     
