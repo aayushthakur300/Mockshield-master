@@ -682,36 +682,28 @@ import { getInterviews, deleteSession, clearAllSessions } from '../services/api'
 const Dashboard = () => {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [loadingMessage, setLoadingMessage] = useState("[LOADING DATA STREAMS...]");
   const [isClearing, setIsClearing] = useState(false);
+  const [isServerAwake, setIsServerAwake] = useState(false); // New state to track connection
   const navigate = useNavigate();
 
-  // --- DATA FETCHING WITH SILENT KILLER RETRY LOGIC ---
-  const fetchHistory = async (retryCount = 0) => {
+  // --- DATA FETCHING (INFINITE LOOP LOGIC) ---
+  const fetchHistory = async () => {
       try {
           // Pass a timestamp to force Axios to bypass any browser cache
           const res = await getInterviews({ params: { t: new Date().getTime() } });
           
+          // If we reach this line, the server is AWAKE and responded
           const data = res.data ? (Array.isArray(res.data) ? res.data : []) : [];
           const sortedData = data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
           
           setHistory(sortedData);
-          setLoading(false);
-          setLoadingMessage("[LOADING DATA STREAMS...]"); // Reset on success
+          setIsServerAwake(true); // Mark server as ready
+          setLoading(false);      // Stop the loading pulse
+          console.log("✅ Data Stream Synchronized Successfully.");
       } catch (err) {
-          console.error(`History fetch attempt ${retryCount + 1} failed:`, err);
-          
-          // 🔥 SILENT KILLER DETECTED: Render Cold Start Fix 🔥
-          // Render takes up to 60s to wake up. We retry 5 times before failing.
-          if (retryCount < 18) {
-              setLoadingMessage(`[SERVER SLEEP DETECTED] Waking up database (Attempt ${retryCount + 1}/17)...`);
-              setTimeout(() => {
-                  fetchHistory(retryCount + 1);
-              }, 5000); // Wait 5 seconds before trying again
-          } else {
-              setLoadingMessage("Server took too long to wake up. Please refresh the page manually.");
-              setLoading(false);
-          }
+          console.warn("⏳ Render is sleeping or disconnected. Retrying in 5 seconds...");
+          // INFINITE LOOP: If it fails, wait 5 seconds and call itself again
+          setTimeout(fetchHistory, 5000);
       }
   };
 
@@ -797,9 +789,9 @@ const Dashboard = () => {
     
     const sessionType = determineSessionType(item);
     if (sessionType === "Resume Assessment") {
-         navigate('/resume-report', { state: { feedback: feedbackData, answers: rawData.questions, topic: item.topic } });
+          navigate('/resume-report', { state: { feedback: feedbackData, answers: rawData.questions, topic: item.topic } });
     } else {
-         navigate('/report', { state: { feedback: feedbackData, answers: rawData.questions } });
+          navigate('/report', { state: { feedback: feedbackData, answers: rawData.questions } });
     }
   };
 
@@ -856,7 +848,7 @@ const Dashboard = () => {
         <div className="bg-white border-l-4 border-blue-500 p-4 mb-6 shadow-sm rounded-r-lg flex items-center gap-3">
             <i className="fa-solid fa-circle-info text-blue-500"></i>
             <p className="text-sm text-slate-700 font-medium">
-                <span className="font-bold text-slate-900">Note:</span> Refresh this page to ensure your latest interview data is fully synchronized.
+                <span className="font-bold text-slate-900">System Status:</span> {isServerAwake ? "Connected to Cloud Database." : "Waiting for Cloud Database to wake up..."}
             </p>
         </div>
 
@@ -868,22 +860,22 @@ const Dashboard = () => {
             </h1>
           </div>
           <div className="flex flex-col sm:flex-row gap-4 items-center">
-             {history.length > 0 && (
-                 <button 
-                     onClick={handleClearAll}
-                     disabled={isClearing}
-                     className="bg-white text-red-600 border border-red-200 px-6 py-4 rounded-xl font-bold shadow-sm hover:bg-red-50 hover:border-red-300 transition-all inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                 >
-                     {isClearing ? (
-                         <><i className="fa-solid fa-spinner fa-spin"></i> Clearing...</>
-                     ) : (
-                         <><i className="fa-solid fa-trash-can"></i> Clear History</>
-                     )}
-                 </button>
-             )}
-             <Link to="/setup" className="bg-slate-900 text-white px-8 py-4 rounded-xl font-bold shadow-lg hover:shadow-2xl hover:scale-105 transition-all inline-flex items-center gap-2">
-                <i className="fa-solid fa-play"></i> Initiate New Session
-             </Link>
+              {history.length > 0 && (
+                  <button 
+                      onClick={handleClearAll}
+                      disabled={isClearing}
+                      className="bg-white text-red-600 border border-red-200 px-6 py-4 rounded-xl font-bold shadow-sm hover:bg-red-50 hover:border-red-300 transition-all inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                      {isClearing ? (
+                          <><i className="fa-solid fa-spinner fa-spin"></i> Clearing...</>
+                      ) : (
+                          <><i className="fa-solid fa-trash-can"></i> Clear History</>
+                      )}
+                  </button>
+              )}
+              <Link to="/setup" className="bg-slate-900 text-white px-8 py-4 rounded-xl font-bold shadow-lg hover:shadow-2xl hover:scale-105 transition-all inline-flex items-center gap-2">
+                 <i className="fa-solid fa-play"></i> Initiate New Session
+              </Link>
           </div>
         </div>
 
@@ -891,14 +883,14 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
             <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col items-center justify-center text-center">
                 <span className="font-mono text-xs font-bold text-gray-400 uppercase mb-2">Total Sessions</span>
-                <p className="text-5xl font-black text-slate-800">{history.length}</p>
+                <p className="text-5xl font-black text-slate-800">{isServerAwake ? history.length : "--"}</p>
             </div>
             <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col items-center justify-center text-center">
                 <span className="font-mono text-xs font-bold text-gray-400 uppercase mb-2">Avg Performance</span>
                 <p className="text-5xl font-black text-slate-800">
-                    {history.length > 0 
+                    {!isServerAwake ? "--" : (history.length > 0 
                         ? (history.reduce((acc, curr) => acc + extractSafeScore(curr), 0) / history.length).toFixed(0) 
-                        : "0"}
+                        : "0")}
                 </p>
             </div>
         </div>
@@ -910,8 +902,8 @@ const Dashboard = () => {
         
         {/* Logs List Body */}
         {loading ? (
-            <div className="text-center py-20 font-mono text-gray-500 animate-pulse font-bold text-sm bg-white rounded-xl shadow-sm border border-slate-200">
-                {loadingMessage}
+            <div className="text-center py-20 font-mono text-gray-400 animate-pulse">
+                [WAITING FOR CLOUD DATA STREAMS...]
             </div>
         ) : (
             <div className="space-y-4">
@@ -928,8 +920,6 @@ const Dashboard = () => {
                       const disqualified = isSessionDisqualified(item);
                       const sessionType = determineSessionType(item); 
                       const score = extractSafeScore(item);
-                      
-                      // 🔥 EXTRACTING FLAG COUNT DIRECTLY FOR THE UI DASHBOARD CARD 🔥
                       const rawData = item.full_data || {};
                       const flagCount = rawData.integrity?.count || rawData.feedback?.integrity?.count || 0;
 
@@ -941,17 +931,13 @@ const Dashboard = () => {
                               disqualified ? 'border-l-4 border-l-red-500' : 'border-l-4 border-l-blue-500'
                           }`}
                         >
-                          
-                          {/* 1. Session Metadata */}
                           <div className="md:w-1/4 z-10 flex flex-col items-start">
                               <span className="font-mono text-xs text-gray-400 block mb-1">
                                   {new Date(item.createdAt).toLocaleDateString()} • {new Date(item.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                               </span>
-                              
                               <h4 className="font-black text-lg leading-tight text-slate-800 group-hover:text-blue-600 transition-colors uppercase break-words">
                                   {getTopicDisplay(item)}
                               </h4>
-                              
                               <div className="flex flex-wrap gap-2 mt-2">
                                   <span className={`text-xs font-bold px-2 py-1 rounded inline-flex items-center gap-1 border ${
                                       sessionType === "Resume Assessment" 
@@ -964,8 +950,6 @@ const Dashboard = () => {
                                           <><i className="fa-solid fa-microphone-lines"></i> Mock Interview</>
                                       )}
                                   </span>
-
-                                  {/* 🔥 NEW UI ELEMENT: PERMANENT FLAG BADGE 🔥 */}
                                   {flagCount > 0 ? (
                                       <span className="text-xs font-bold px-2 py-1 rounded inline-flex items-center gap-1 border bg-red-50 text-red-700 border-red-200">
                                           <i className="fa-solid fa-flag"></i> {flagCount} Flags
@@ -977,8 +961,6 @@ const Dashboard = () => {
                                   )}
                               </div>
                           </div>
-                          
-                          {/* 2. Summary */}
                           <div className="md:w-2/4 z-10">
                                <div className={`p-3 rounded border transition-colors ${
                                    disqualified ? "bg-red-50 border-red-100" : "bg-slate-50 border-slate-100 group-hover:bg-blue-50/50"
@@ -986,14 +968,10 @@ const Dashboard = () => {
                                   {disqualified ? (
                                       <div className="flex flex-col gap-1">
                                           <div className="text-red-600 font-bold flex items-center gap-2">
-                                              <i className="fa-solid fa-triangle-exclamation"></i>
-                                              SESSION TERMINATED
+                                              <i className="fa-solid fa-triangle-exclamation"></i> SESSION TERMINATED
                                           </div>
                                           <p className="text-xs text-red-800 font-mono">
                                               Reason: {item.summary || item.overallFeedback || "Policy Violation"}
-                                          </p>
-                                          <p className="text-xs text-gray-400 font-mono mt-1 border-t border-red-200 pt-1">
-                                              SID: {item.id}
                                           </p>
                                       </div>
                                   ) : (
@@ -1003,13 +981,10 @@ const Dashboard = () => {
                                   )}
                                </div>
                           </div>
-
-                          {/* 3. Score & Actions */}
                           <div className="md:w-1/4 flex items-center justify-end gap-4 z-10">
                               <div className={`px-4 py-2 font-black text-xl border-2 rounded ${getScoreColor(score, disqualified)}`}>
                                   {score.toFixed(0)}
                               </div>
-
                               <button 
                                   onClick={(e) => handleDelete(e, item.id)}
                                   className="w-10 h-10 rounded-full bg-white border border-gray-200 text-gray-400 hover:text-red-600 hover:border-red-600 hover:bg-red-50 transition-all flex items-center justify-center shadow-sm"

@@ -105,90 +105,18 @@
 //--------------------------------------------------------------------------------------------------------------
 import axios from 'axios';
 
-// --- PRODUCTION CONFIGURATION ---
-/** * On Vercel/Render, 'import.meta.env.VITE_...' pulls the real live URLs.
- * If you haven't set them in the dashboard, the app will try to hit localhost and fail.
- */
-const PYTHON_API_BASE = import.meta.env.VITE_PYTHON_API_URL; 
-const NODE_API_BASE = import.meta.env.VITE_NODE_API_URL;
+const NODE_API_BASE = import.meta.env.VITE_NODE_API_URL || 'http://localhost:5000/api';
+const NODE_API = NODE_API_BASE.replace(/\/+$/, '');
 
-// Validation: Alert the developer if variables are missing in production
-if (!PYTHON_API_BASE || !NODE_API_BASE) {
-    console.error("❌ CRITICAL: Production API URLs are missing in Environment Variables!");
-}
-
-const PYTHON_API = PYTHON_API_BASE?.replace(/\/+$/, '');
-const NODE_API = NODE_API_BASE?.replace(/\/+$/, '');
-
-// ==========================================
-//  1. AI GENERATION & LOGIC (Python Engine)
-// ==========================================
-export const generateQuestions = (config) => 
-    axios.post(`${PYTHON_API}/generate`, config);
-
-export const generateResumeQuestions = (resumeText, domain, yoe, count) => 
-    axios.post(`${PYTHON_API}/generate_resume_questions`, { 
-        resume_text: resumeText, 
-        domain: domain, 
-        yoe: parseInt(yoe), 
-        count: parseInt(count) 
-    });
-
-export const chatWithCoach = (message, context) => 
-    axios.post(`${PYTHON_API}/chat`, { message, context });
-
-// ==========================================
-//  2. EVALUATION ENDPOINTS (Python Engine)
-// ==========================================
-export const evaluateSession = (transcript) => 
-    axios.post(`${PYTHON_API}/evaluate_session`, { transcript });
-
-export const evaluateResumeSession = (transcript, domain, experienceLevel) => 
-    axios.post(`${PYTHON_API}/evaluate_resume_session`, { 
-        transcript, 
-        domain, 
-        experience_level: experienceLevel 
-    });
-
-// ==========================================
-//  3. DATA STORAGE (Node.js + Neon PostgreSQL)
-// ==========================================
-
-export const getInterviews = async () => {
-    try {
-        const response = await axios.get(`${NODE_API}/interview`);
-        return response.data; // Crucial for Dashboard mapping
-    } catch (error) {
-        console.error("❌ API FETCH ERROR:", error);
-        throw error;
-    }
+// 🔥 FIX: Return the WHOLE response object so Dashboard's 'res.data' works!
+export const getInterviews = async (config = {}) => {
+    return await axios.get(`${NODE_API}/interview`, config);
 };
 
 export const saveInterview = async (data) => {
-    try {
-        const response = await axios.post(`${NODE_API}/interview`, data);
-        return response.data;
-    } catch (error) {
-        console.error("❌ API SAVE ERROR:", error);
-        throw error;
-    }
+    return await axios.post(`${NODE_API}/interview`, data);
 };
 
-export const deleteSession = (id) => 
-    axios.delete(`${NODE_API}/interview/${id}`);
+export const deleteSession = (id) => axios.delete(`${NODE_API}/interview/${id}`);
 
-export const clearAllSessions = () => 
-    axios.delete(`${NODE_API}/interview/clear`);
-
-// ==========================================
-//  4. FEEDBACK & TELEMETRY
-// ==========================================
-export const submitFeedback = async (feedbackData) => {
-    const response = await axios.post(`${PYTHON_API}/feedback`, feedbackData);
-    return response.data;
-};
-
-export const logUserAction = async (data) => {
-    console.log("🛡️ [ADMIN TELEMETRY]:", data);
-    return Promise.resolve({ success: true });
-};
+export const clearAllSessions = () => axios.delete(`${NODE_API}/interview/clear`);
