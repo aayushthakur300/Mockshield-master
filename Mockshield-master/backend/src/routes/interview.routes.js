@@ -42,11 +42,13 @@ const Interview = require('../models/Interview');
 
 router.post('/', auth, async (req, res) => {
   try {
-    const { questions, totalScore, overallFeedback } = req.body;
+    // 👇 Extract the topic from req.body
+    const { topic, questions, totalScore, overallFeedback } = req.body;
     
     const interview = await Interview.create({
       userId: req.user.id,
-      questions_data: questions, // Stores the full Q&A array as JSON
+      topic: topic || 'General', // 👇 Save the exact topic to Neon
+      questions_data: questions, 
       total_score: totalScore,
       overall_feedback: overallFeedback
     });

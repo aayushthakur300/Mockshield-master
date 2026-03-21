@@ -39,7 +39,11 @@ const Interview = sequelize.define('Interview', {
     autoIncrement: true,
     primaryKey: true
   },
-  // We store the list of questions/answers as a JSON object in Postgres
+  // 👇 THE NEW TOPIC COLUMN 👇
+  topic: {
+    type: DataTypes.STRING,
+    defaultValue: 'General' // If no topic is sent, it defaults to 'General'
+  },
   questions_data: {
     type: DataTypes.JSONB, 
     allowNull: false
