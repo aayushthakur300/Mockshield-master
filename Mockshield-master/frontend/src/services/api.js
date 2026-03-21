@@ -104,14 +104,25 @@
 //--------------------------------------------------------------------------------------------------------------
 import axios from 'axios';
 
-// --- CONFIGURATION ---
-// VITE_PYTHON_API_URL will be injected by Render during deployment
-const PYTHON_API = import.meta.env.VITE_PYTHON_API_URL || 'http://localhost:8000';
-const NODE_API = import.meta.env.VITE_NODE_API_URL || 'http://localhost:5000/api';
+// --- CONFIGURATION & MANUAL FORCE LOGIC ---
+const rawPythonUrl = import.meta.env.VITE_PYTHON_API_URL || 'http://localhost:8000';
+const rawNodeUrl = import.meta.env.VITE_NODE_API_URL || 'http://localhost:5000/api';
 
-// --- SECURITY PROTOCOL ---
-// Helper function to securely get the user token from localStorage
-// This is required by your Node.js backend (middleware/auth.js)
+// 1. Strip any accidental trailing slashes from the Vercel variables
+const cleanPythonUrl = rawPythonUrl.replace(/\/+$/, '');
+let cleanNodeUrl = rawNodeUrl.replace(/\/+$/, '');
+
+// 2. 🔥 MANUALLY FORCE '/api': If Vercel URL doesn't have it, inject it here 🔥
+if (!cleanNodeUrl.endsWith('/api')) {
+    cleanNodeUrl += '/api';
+}
+
+const PYTHON_API = cleanPythonUrl;
+const NODE_API = cleanNodeUrl;
+
+// --- SECURITY PROTOCOL (PREFLIGHT TRIGGER) ---
+// Helper function to securely get the user token from localStorage.
+// Adding this custom header automatically triggers the required OPTIONS preflight check in the browser.
 const getAuthHeaders = () => {
     const token = localStorage.getItem('token'); 
     return {
@@ -207,7 +218,6 @@ export const logUserAction = async (data) => {
 // ==========================================
 export const submitFeedback = async (feedbackData) => {
     try {
-        // FIXED: Now using the dynamic Vercel/Render URL
         const response = await axios.post(`${PYTHON_API}/feedback`, feedbackData);
         console.log("✅ [API] Feedback submitted successfully");
         return response.data;
