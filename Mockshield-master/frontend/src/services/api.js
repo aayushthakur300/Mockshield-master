@@ -105,18 +105,88 @@
 //--------------------------------------------------------------------------------------------------------------
 import axios from 'axios';
 
+// --- CONFIGURATION ---
+// Automatically switches between your Render URLs (Production) and localhost (Testing)
+const PYTHON_API_BASE = import.meta.env.VITE_PYTHON_API_URL || 'http://localhost:8000';
 const NODE_API_BASE = import.meta.env.VITE_NODE_API_URL || 'http://localhost:5000/api';
+
+// Clean trailing slashes to prevent "double-slash" errors in the URL
+const PYTHON_API = PYTHON_API_BASE.replace(/\/+$/, '');
 const NODE_API = NODE_API_BASE.replace(/\/+$/, '');
 
-// 🔥 FIX: Return the WHOLE response object so Dashboard's 'res.data' works!
+// ==========================================
+//  1. AI GENERATION & LOGIC (Python Engine)
+// ==========================================
+
+// ✅ Fixes the "generateQuestions" import in Setup.jsx
+export const generateQuestions = (config) => 
+    axios.post(`${PYTHON_API}/generate`, config);
+
+// ✅ Fixes the "generateResumeQuestions" Build Error in Setup.jsx
+export const generateResumeQuestions = (resumeText, domain, yoe, count) => 
+    axios.post(`${PYTHON_API}/generate_resume_questions`, { 
+        resume_text: resumeText, 
+        domain: domain, 
+        yoe: parseInt(yoe), 
+        count: parseInt(count) 
+    });
+
+export const chatWithCoach = (message, context) => 
+    axios.post(`${PYTHON_API}/chat`, { message, context });
+
+// ==========================================
+//  2. EVALUATION ENDPOINTS (Python Engine)
+// ==========================================
+
+export const evaluateSession = (transcript) => 
+    axios.post(`${PYTHON_API}/evaluate_session`, { transcript });
+
+export const evaluateResumeSession = (transcript, domain, experienceLevel) => 
+    axios.post(`${PYTHON_API}/evaluate_resume_session`, { 
+        transcript, 
+        domain, 
+        experience_level: experienceLevel 
+    });
+
+// ==========================================
+//  3. DATA STORAGE (Node.js + Neon PostgreSQL)
+// ==========================================
+
+// 🔥 CRITICAL: Returns the FULL response so Dashboard.jsx (res.data) works perfectly
 export const getInterviews = async (config = {}) => {
-    return await axios.get(`${NODE_API}/interview`, config);
+    try {
+        return await axios.get(`${NODE_API}/interview`, config);
+    } catch (error) {
+        console.error("❌ API FETCH ERROR:", error);
+        throw error;
+    }
 };
 
 export const saveInterview = async (data) => {
-    return await axios.post(`${NODE_API}/interview`, data);
+    try {
+        return await axios.post(`${NODE_API}/interview`, data);
+    } catch (error) {
+        console.error("❌ API SAVE ERROR:", error);
+        throw error;
+    }
 };
 
-export const deleteSession = (id) => axios.delete(`${NODE_API}/interview/${id}`);
+export const deleteSession = (id) => 
+    axios.delete(`${NODE_API}/interview/${id}`);
 
-export const clearAllSessions = () => axios.delete(`${NODE_API}/interview/clear`);
+export const clearAllSessions = () => 
+    axios.delete(`${NODE_API}/interview/clear`);
+
+// ==========================================
+//  4. FEEDBACK & TELEMETRY
+// ==========================================
+
+export const submitFeedback = async (feedbackData) => {
+    const response = await axios.post(`${PYTHON_API}/feedback`, feedbackData);
+    return response.data;
+};
+
+export const logUserAction = async (data) => {
+    console.log("🛡️ [ADMIN TELEMETRY]:", data);
+    return Promise.resolve({ success: true });
+};
