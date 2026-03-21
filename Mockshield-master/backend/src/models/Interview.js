@@ -59,7 +59,5 @@ const Interview = sequelize.define('Interview', {
 });
 
 // Setup Relationship
-User.hasMany(Interview, { foreignKey: 'userId' });
-Interview.belongsTo(User, { foreignKey: 'userId' });
 
 module.exports = Interview;

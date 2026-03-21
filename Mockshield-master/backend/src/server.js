@@ -93,7 +93,7 @@ app.get('/', (req, res) => {
 });
 
 // 5. Routes
-app.use('/api/auth', require('./routes/auth.routes'));
+
 app.use('/api/interview', require('./routes/interview.routes'));
 
 // 6. REGISTER SILENT KILLER (Must be last)
