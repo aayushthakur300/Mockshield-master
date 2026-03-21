@@ -38,7 +38,7 @@ const sequelize = new Sequelize(process.env.DATABASE_URL, {
 const connectDB = async () => {
   try {
     await sequelize.authenticate();
-    console.log('✅ PostgreSQL Connected Successfully.');
+    console.log('✅ Neon Database Connected Successfully.');
     // Sync models (create tables if they don't exist)
     await sequelize.sync(); 
   } catch (error) {
