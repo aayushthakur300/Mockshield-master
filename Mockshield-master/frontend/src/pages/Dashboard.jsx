@@ -703,8 +703,8 @@ const Dashboard = () => {
           
           // 🔥 SILENT KILLER DETECTED: Render Cold Start Fix 🔥
           // Render takes up to 60s to wake up. We retry 5 times before failing.
-          if (retryCount < 16) {
-              setLoadingMessage(`[SERVER SLEEP DETECTED] Waking up database (Attempt ${retryCount + 1}/5)...`);
+          if (retryCount < 18) {
+              setLoadingMessage(`[SERVER SLEEP DETECTED] Waking up database (Attempt ${retryCount + 1}/17)...`);
               setTimeout(() => {
                   fetchHistory(retryCount + 1);
               }, 5000); // Wait 5 seconds before trying again
