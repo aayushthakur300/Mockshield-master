@@ -13,9 +13,9 @@ import threading
 import hashlib
 import concurrent.futures
 from datetime import datetime, timezone
-import psycopg2
+# import psycopg2
 from dotenv import load_dotenv
-
+from pymongo import MongoClient, ASCENDING, DESCENDING
 # ==========================================
 # 1. SYSTEM CONFIGURATION & TELEMETRY
 # ==========================================
@@ -148,6 +148,222 @@ def sanitize_transcript_for_prompt(transcript_data):
 # 4. SCALABLE LSH HISTORY MANAGER (NEON POSTGRESQL)
 # ==========================================
 
+# class ScalableHistoryManager:
+#     NUM_HASHES = 60
+#     BANDS = 20
+#     ROWS_PER_BAND = 3 
+    
+#     STOPWORDS = {
+#         "the", "a", "an", "in", "on", "at", "to", "for", "of", "with", "by", 
+#         "is", "are", "was", "were", "be", "been", "this", "that", "it", 
+#         "calculate", "find", "what", "how", "write", "function", "program",
+#         "determine", "value", "given", "assume", "suppose", "example",
+#         "explain", "describe", "code", "create", "list", "difference", "between",
+#         "and", "or", "but", "if", "then", "else", "when", "can", "you", "provide"
+#     }
+
+#     def __init__(self):
+#         self.db_url = os.getenv("DATABASE_URL")
+#         self.lock = threading.Lock() 
+#         self._initialize_db()
+
+#     def get_db_connection(self):
+#         conn = psycopg2.connect(self.db_url)
+#         conn.autocommit = True
+#         return conn
+
+#     def _initialize_db(self):
+#         try:
+#             conn = self.get_db_connection()
+#             cursor = conn.cursor()
+            
+#             cursor.execute('''
+#                 CREATE TABLE IF NOT EXISTS lsh_questions (
+#                     id SERIAL PRIMARY KEY,
+#                     topic TEXT,
+#                     question TEXT,
+#                     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+#                 )
+#             ''')
+            
+#             cursor.execute('''
+#                 CREATE TABLE IF NOT EXISTS lsh_index (
+#                     band_index INTEGER,
+#                     hash_value TEXT,
+#                     question_id INTEGER,
+#                     topic TEXT,
+#                     FOREIGN KEY(question_id) REFERENCES lsh_questions(id) ON DELETE CASCADE
+#                 )
+#             ''')
+            
+#             cursor.execute('CREATE INDEX IF NOT EXISTS idx_topic ON lsh_questions(topic)')
+#             cursor.execute('CREATE INDEX IF NOT EXISTS idx_lsh_lookup ON lsh_index(topic, band_index, hash_value)')
+            
+#             conn.commit()
+#             conn.close()
+#         except Exception as e:
+#             print(f"HISTORY INIT ERROR: {e}", flush=True)
+
+#     def get_recent_questions(self, topic, limit=350):
+#         clean_topic = topic.lower().strip()
+#         try:
+#             with self.lock: 
+#                 conn = self.get_db_connection()
+#                 cursor = conn.cursor()
+#                 cursor.execute("SELECT question FROM lsh_questions WHERE topic = %s ORDER BY id DESC LIMIT %s", (clean_topic, limit))
+#                 results = [row[0] for row in cursor.fetchall()]
+#                 conn.close()
+#                 return results
+#         except Exception as e:
+#             print(f"DB READ ERROR: {e}", flush=True)
+#             return []
+
+#     def _tokenize(self, text):
+#         if not text: return set()
+#         text = re.sub(r'[^\w\s]', '', text.lower())
+#         return set(word for word in text.split() if word not in self.STOPWORDS and len(word) > 2)
+
+#     def _minhash_signature(self, tokens):
+#         sig = []
+#         token_list = sorted(list(tokens)) 
+#         for i in range(self.NUM_HASHES):
+#             min_h = float('inf')
+#             for t in token_list:
+#                 h = int(hashlib.md5(f"{i}_{t}".encode('utf-8')).hexdigest()[:8], 16)
+#                 if h < min_h: min_h = h
+#             sig.append(min_h)
+#         return sig
+
+#     def is_duplicate(self, new_question_text, topic, jaccard_threshold=0.35):
+#         if not new_question_text: return True
+#         clean_topic = topic.lower().strip()
+#         new_tokens = self._tokenize(new_question_text)
+#         if len(new_tokens) < 3: return False
+
+#         recent_qs = self.get_recent_questions(clean_topic, limit=350)
+#         clean_new = re.sub(r'[^\w\s]', '', new_question_text.lower().strip())
+        
+#         # ---------------------------------------------------------
+#         # TRACEBACK & DUPLICATE TRACKING (LAYER 1: BRUTE FORCE)
+#         # ---------------------------------------------------------
+#         for past_q in recent_qs:
+#             clean_past = re.sub(r'[^\w\s]', '', past_q.lower().strip())
+            
+#             # Exact or Substring Match Detection
+#             if clean_new in clean_past or clean_past in clean_new:
+#                 print(f"\n🚫 [EXACT DUPLICATE DETECTED] Substring match found!", flush=True)
+#                 print(f"   NEW: '{new_question_text[:80]}...'", flush=True)
+#                 print(f"   OLD: '{past_q[:80]}...'", flush=True)
+#                 print("🔍 [TRACEBACK LOG] Where did this duplicate occur?", flush=True)
+#                 traceback.print_stack()
+#                 print("-" * 50, flush=True)
+#                 return True
+
+#             # Jaccard Token Similarity Detection
+#             past_tokens = self._tokenize(past_q)
+#             intersection = new_tokens.intersection(past_tokens)
+#             union = new_tokens.union(past_tokens)
+#             if len(union) == 0: continue
+            
+#             similarity = len(intersection) / len(union)
+#             if similarity > jaccard_threshold:
+#                 print(f"\n🚫 [JACCARD DUPLICATE DETECTED] Similarity Score: {similarity:.2f}", flush=True)
+#                 print(f"   NEW: '{new_question_text[:80]}...'", flush=True)
+#                 print(f"   OLD: '{past_q[:80]}...'", flush=True)
+#                 print("🔍 [TRACEBACK LOG] Where did this duplicate occur?", flush=True)
+#                 traceback.print_stack()
+#                 print("-" * 50, flush=True)
+#                 return True
+
+#         # ---------------------------------------------------------
+#         # TRACEBACK & DUPLICATE TRACKING (LAYER 2: NEON LSH POSTGRES)
+#         # ---------------------------------------------------------
+#         sig = self._minhash_signature(new_tokens)
+#         query_parts = []
+#         params = [clean_topic]
+        
+#         for b in range(self.BANDS):
+#             start = b * self.ROWS_PER_BAND
+#             end = start + self.ROWS_PER_BAND
+#             band_val = "-".join(map(str, sig[start:end]))
+#             query_parts.append("(band_index = %s AND hash_value = %s)")
+#             params.extend([b, band_val])
+            
+#         query = f"""
+#             SELECT DISTINCT q.question 
+#             FROM lsh_questions q 
+#             JOIN lsh_index l ON q.id = l.question_id 
+#             WHERE l.topic = %s AND ({' OR '.join(query_parts)})
+#         """
+        
+#         try:
+#             with self.lock:
+#                 conn = self.get_db_connection()
+#                 cursor = conn.cursor()
+#                 cursor.execute(query, params)
+#                 candidates = [row[0] for row in cursor.fetchall()]
+#                 conn.close()
+#         except Exception as e:
+#             print(f"LSH LOOKUP ERROR: {e}", flush=True)
+#             return False
+
+#         for past_q in candidates:
+#             past_tokens = self._tokenize(past_q)
+#             intersection = new_tokens.intersection(past_tokens)
+#             union = new_tokens.union(past_tokens)
+#             if len(union) == 0: continue
+#             similarity = len(intersection) / len(union)
+#             if similarity > jaccard_threshold:
+#                 print(f"\n🚫 [LSH DUPLICATE DETECTED] Similarity Score: {similarity:.2f}", flush=True)
+#                 print(f"   NEW: '{new_question_text[:80]}...'", flush=True)
+#                 print(f"   OLD: '{past_q[:80]}...'", flush=True)
+#                 print("🔍 [TRACEBACK LOG] Where did this database duplicate occur?", flush=True)
+#                 traceback.print_stack()
+#                 print("-" * 50, flush=True)
+#                 return True
+                
+#         return False
+
+#     def add_questions(self, topic, new_questions):
+#         clean_topic = topic.lower().strip()
+        
+#         try:
+#             with self.lock:
+#                 conn = self.get_db_connection()
+#                 cursor = conn.cursor()
+#                 for q in new_questions:
+#                     if isinstance(q, dict) and 'question' in q:
+#                         q_text = q['question']
+                        
+#                         cursor.execute("INSERT INTO lsh_questions (topic, question) VALUES (%s, %s) RETURNING id", (clean_topic, q_text))
+#                         q_id = cursor.fetchone()[0]
+                        
+#                         tokens = self._tokenize(q_text)
+#                         if len(tokens) >= 3:
+#                             sig = self._minhash_signature(tokens)
+#                             lsh_data = []
+#                             for b in range(self.BANDS):
+#                                 start = b * self.ROWS_PER_BAND
+#                                 end = start + self.ROWS_PER_BAND
+#                                 band_val = "-".join(map(str, sig[start:end]))
+#                                 lsh_data.append((b, band_val, q_id, clean_topic))
+                                
+#                             cursor.executemany("INSERT INTO lsh_index (band_index, hash_value, question_id, topic) VALUES (%s, %s, %s, %s)", lsh_data)
+                
+#                 conn.commit()
+#                 conn.close()
+#         except Exception as e:
+#             print(f"DB LSH WRITE ERROR: {e}", flush=True)
+
+#     def close(self):
+#         pass
+
+# history_system = ScalableHistoryManager()
+
+# ==========================================
+# 4. SCALABLE LSH HISTORY MANAGER (MONGODB)
+# ==========================================
+
 class ScalableHistoryManager:
     NUM_HASHES = 60
     BANDS = 20
@@ -164,56 +380,31 @@ class ScalableHistoryManager:
 
     def __init__(self):
         self.db_url = os.getenv("DATABASE_URL")
+        self.client = None
+        self.db = None
+        self.collection = None
         self.lock = threading.Lock() 
         self._initialize_db()
 
-    def get_db_connection(self):
-        conn = psycopg2.connect(self.db_url)
-        conn.autocommit = True
-        return conn
-
     def _initialize_db(self):
         try:
-            conn = self.get_db_connection()
-            cursor = conn.cursor()
-            
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS lsh_questions (
-                    id SERIAL PRIMARY KEY,
-                    topic TEXT,
-                    question TEXT,
-                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            ''')
-            
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS lsh_index (
-                    band_index INTEGER,
-                    hash_value TEXT,
-                    question_id INTEGER,
-                    topic TEXT,
-                    FOREIGN KEY(question_id) REFERENCES lsh_questions(id) ON DELETE CASCADE
-                )
-            ''')
-            
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_topic ON lsh_questions(topic)')
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_lsh_lookup ON lsh_index(topic, band_index, hash_value)')
-            
-            conn.commit()
-            conn.close()
+            self.client = MongoClient(self.db_url)
+            self.db = self.client.get_default_database() 
+            self.collection = self.db.lsh_questions
+            self.collection.create_index([("topic", ASCENDING)])
+            self.collection.create_index([("lsh_hashes", ASCENDING)])
+            logging.info("MongoDB Connection Established for LSH History Manager.")
         except Exception as e:
-            print(f"HISTORY INIT ERROR: {e}", flush=True)
+            print(f"HISTORY INIT ERROR (MongoDB): {e}", flush=True)
+            logging.error(f"HISTORY INIT ERROR (MongoDB): {e}")
 
     def get_recent_questions(self, topic, limit=350):
         clean_topic = topic.lower().strip()
         try:
             with self.lock: 
-                conn = self.get_db_connection()
-                cursor = conn.cursor()
-                cursor.execute("SELECT question FROM lsh_questions WHERE topic = %s ORDER BY id DESC LIMIT %s", (clean_topic, limit))
-                results = [row[0] for row in cursor.fetchall()]
-                conn.close()
-                return results
+                cursor = self.collection.find({"topic": clean_topic}).sort("_id", DESCENDING).limit(limit)
+                # Ensure we return the 'question' text for LSH comparison, even if full dict is saved
+                return [doc.get("question", doc.get("data", "")) for doc in cursor]
         except Exception as e:
             print(f"DB READ ERROR: {e}", flush=True)
             return []
@@ -243,23 +434,17 @@ class ScalableHistoryManager:
         recent_qs = self.get_recent_questions(clean_topic, limit=350)
         clean_new = re.sub(r'[^\w\s]', '', new_question_text.lower().strip())
         
-        # ---------------------------------------------------------
-        # TRACEBACK & DUPLICATE TRACKING (LAYER 1: BRUTE FORCE)
-        # ---------------------------------------------------------
+        # BRUTE FORCE LAYER
         for past_q in recent_qs:
             clean_past = re.sub(r'[^\w\s]', '', past_q.lower().strip())
             
-            # Exact or Substring Match Detection
             if clean_new in clean_past or clean_past in clean_new:
                 print(f"\n🚫 [EXACT DUPLICATE DETECTED] Substring match found!", flush=True)
                 print(f"   NEW: '{new_question_text[:80]}...'", flush=True)
                 print(f"   OLD: '{past_q[:80]}...'", flush=True)
-                print("🔍 [TRACEBACK LOG] Where did this duplicate occur?", flush=True)
                 traceback.print_stack()
-                print("-" * 50, flush=True)
                 return True
 
-            # Jaccard Token Similarity Detection
             past_tokens = self._tokenize(past_q)
             intersection = new_tokens.intersection(past_tokens)
             union = new_tokens.union(past_tokens)
@@ -270,39 +455,25 @@ class ScalableHistoryManager:
                 print(f"\n🚫 [JACCARD DUPLICATE DETECTED] Similarity Score: {similarity:.2f}", flush=True)
                 print(f"   NEW: '{new_question_text[:80]}...'", flush=True)
                 print(f"   OLD: '{past_q[:80]}...'", flush=True)
-                print("🔍 [TRACEBACK LOG] Where did this duplicate occur?", flush=True)
                 traceback.print_stack()
-                print("-" * 50, flush=True)
                 return True
 
-        # ---------------------------------------------------------
-        # TRACEBACK & DUPLICATE TRACKING (LAYER 2: NEON LSH POSTGRES)
-        # ---------------------------------------------------------
+        # LSH LAYER
         sig = self._minhash_signature(new_tokens)
-        query_parts = []
-        params = [clean_topic]
-        
+        query_hashes = []
         for b in range(self.BANDS):
             start = b * self.ROWS_PER_BAND
             end = start + self.ROWS_PER_BAND
             band_val = "-".join(map(str, sig[start:end]))
-            query_parts.append("(band_index = %s AND hash_value = %s)")
-            params.extend([b, band_val])
+            query_hashes.append(f"{b}:{band_val}")
             
-        query = f"""
-            SELECT DISTINCT q.question 
-            FROM lsh_questions q 
-            JOIN lsh_index l ON q.id = l.question_id 
-            WHERE l.topic = %s AND ({' OR '.join(query_parts)})
-        """
-        
         try:
             with self.lock:
-                conn = self.get_db_connection()
-                cursor = conn.cursor()
-                cursor.execute(query, params)
-                candidates = [row[0] for row in cursor.fetchall()]
-                conn.close()
+                candidates_cursor = self.collection.find({
+                    "topic": clean_topic,
+                    "lsh_hashes": {"$in": query_hashes}
+                })
+                candidates = [doc.get("question", doc.get("data", "")) for doc in candidates_cursor]
         except Exception as e:
             print(f"LSH LOOKUP ERROR: {e}", flush=True)
             return False
@@ -317,46 +488,55 @@ class ScalableHistoryManager:
                 print(f"\n🚫 [LSH DUPLICATE DETECTED] Similarity Score: {similarity:.2f}", flush=True)
                 print(f"   NEW: '{new_question_text[:80]}...'", flush=True)
                 print(f"   OLD: '{past_q[:80]}...'", flush=True)
-                print("🔍 [TRACEBACK LOG] Where did this database duplicate occur?", flush=True)
                 traceback.print_stack()
-                print("-" * 50, flush=True)
                 return True
                 
         return False
 
     def add_questions(self, topic, new_questions):
         clean_topic = topic.lower().strip()
+        docs_to_insert = []
         
         try:
-            with self.lock:
-                conn = self.get_db_connection()
-                cursor = conn.cursor()
-                for q in new_questions:
-                    if isinstance(q, dict) and 'question' in q:
-                        q_text = q['question']
-                        
-                        cursor.execute("INSERT INTO lsh_questions (topic, question) VALUES (%s, %s) RETURNING id", (clean_topic, q_text))
-                        q_id = cursor.fetchone()[0]
-                        
-                        tokens = self._tokenize(q_text)
-                        if len(tokens) >= 3:
-                            sig = self._minhash_signature(tokens)
-                            lsh_data = []
-                            for b in range(self.BANDS):
-                                start = b * self.ROWS_PER_BAND
-                                end = start + self.ROWS_PER_BAND
-                                band_val = "-".join(map(str, sig[start:end]))
-                                lsh_data.append((b, band_val, q_id, clean_topic))
-                                
-                            cursor.executemany("INSERT INTO lsh_index (band_index, hash_value, question_id, topic) VALUES (%s, %s, %s, %s)", lsh_data)
-                
-                conn.commit()
-                conn.close()
+            for q in new_questions:
+                if isinstance(q, dict) and 'question' in q:
+                    q_text = q['question']
+                    tokens = self._tokenize(q_text)
+                    lsh_hashes = []
+                    
+                    if len(tokens) >= 3:
+                        sig = self._minhash_signature(tokens)
+                        for b in range(self.BANDS):
+                            start = b * self.ROWS_PER_BAND
+                            end = start + self.ROWS_PER_BAND
+                            band_val = "-".join(map(str, sig[start:end]))
+                            lsh_hashes.append(f"{b}:{band_val}")
+
+                    # 🔥 CRITICAL RESTORE: Saving the ENTIRE object (id, type, etc) just like JSONB in Postgres
+                    doc = q.copy() 
+                    doc.update({
+                        "topic": clean_topic,
+                        "lsh_hashes": lsh_hashes,
+                        "timestamp": datetime.now(timezone.utc)
+                    })
+                    docs_to_insert.append(doc)
+                    
+                    # 📝 LOGGING: Print exactly what is being tracked for the logs
+                    log_msg = f"Added Question to DB [{doc.get('type', 'general')}]: {q_text[:100]}..."
+                    print(log_msg, flush=True)
+                    logging.info(log_msg)
+
+            if docs_to_insert:
+                with self.lock:
+                    self.collection.insert_many(docs_to_insert)
+                    
         except Exception as e:
             print(f"DB LSH WRITE ERROR: {e}", flush=True)
+            logging.error(f"DB LSH WRITE ERROR: {e}")
 
     def close(self):
-        pass
+        if self.client:
+            self.client.close()
 
 history_system = ScalableHistoryManager()
 

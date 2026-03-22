@@ -378,7 +378,8 @@ const Dashboard = () => {
     if(!window.confirm("CONFIRM DELETION: This record will be permanently erased.")) return;
 
     try {
-        setHistory(prev => prev.filter(item => item.id !== id));
+        // setHistory(prev => prev.filter(item => item.id !== id));
+        setHistory(prev => prev.filter(item => (item._id || item.id) !== id));
         await deleteSession(id);
     } catch (err) {
         alert("Deletion Failed. Check console/network.");
@@ -577,9 +578,12 @@ const Dashboard = () => {
                       const flagCount = rawData.integrity?.count || rawData.feedback?.integrity?.count || 0;
 
                       return (
+                        // <div 
+                        //   key={item.id} 
+                        //   onClick={() => handleViewReport(item)}
                         <div 
-                          key={item.id} 
-                          onClick={() => handleViewReport(item)} 
+                            key={item._id || item.id} 
+                            onClick={() => handleViewReport(item)}
                           className={`bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex flex-col md:flex-row gap-6 items-start md:items-center group hover:shadow-md transition-all cursor-pointer relative overflow-hidden ${
                               disqualified ? 'border-l-4 border-l-red-500' : 'border-l-4 border-l-blue-500'
                           }`}
@@ -654,7 +658,8 @@ const Dashboard = () => {
                               </div>
 
                               <button 
-                                  onClick={(e) => handleDelete(e, item.id)}
+                                //   onClick={(e) => handleDelete(e, item.id)}
+                                onClick={(e) => handleDelete(e, item._id || item.id)}
                                   className="w-10 h-10 rounded-full bg-white border border-gray-200 text-gray-400 hover:text-red-600 hover:border-red-600 hover:bg-red-50 transition-all flex items-center justify-center shadow-sm"
                                   title="Delete Record"
                               >

@@ -12,8 +12,9 @@ import sys
 import threading
 import unicodedata 
 import concurrent.futures
-from datetime import datetime
-import psycopg2
+from datetime import datetime, timezone
+from pymongo import MongoClient, DESCENDING
+# import psycopg2
 from dotenv import load_dotenv
 
 # ==============================================================================
@@ -295,6 +296,124 @@ def bulletproof_json_parser(raw_text, expected_type='dict'):
 # 3. ROBUST HISTORY MANAGER (Neon PostgreSQL Connection Pooling & Traceback)
 # ==============================================================================
 
+# class HistoryManager:
+#     STOPWORDS = {
+#         "the", "a", "an", "in", "on", "at", "to", "for", "of", "with", "by", 
+#         "is", "are", "was", "were", "be", "been", "this", "that", "it", 
+#         "calculate", "find", "what", "how", "write", "function", "program",
+#         "determine", "probability", "value", "given", "assume", "suppose",
+#         "explain", "describe", "code", "create", "list", "difference", "between"
+#     }
+
+#     def __init__(self):
+#         self.db_url = os.getenv("DATABASE_URL")
+#         self.lock = threading.Lock() 
+#         self._initialize_db()
+
+#     def get_db_connection(self):
+#         conn = psycopg2.connect(self.db_url)
+#         conn.autocommit = True
+#         return conn
+
+#     def _initialize_db(self):
+#         try:
+#             conn = self.get_db_connection()
+#             cursor = conn.cursor()
+#             cursor.execute('''
+#                 CREATE TABLE IF NOT EXISTS resume_evaluations (
+#                     id SERIAL PRIMARY KEY,
+#                     topic TEXT,
+#                     data TEXT,
+#                     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+#                 )
+#             ''')
+#             conn.commit()
+#             conn.close()
+#         except Exception as e: 
+#             print(f"HISTORY INIT ERROR: {e}", flush=True)
+
+#     def get_past_questions(self, topic):
+#         clean_topic = topic.lower().strip()
+#         try:
+#             with self.lock: 
+#                 conn = self.get_db_connection()
+#                 cursor = conn.cursor()
+#                 cursor.execute("SELECT data FROM resume_evaluations WHERE topic = %s ORDER BY id DESC LIMIT 350", (clean_topic,))
+#                 results = [row[0] for row in cursor.fetchall()]
+#                 conn.close()
+#                 return results
+#         except Exception as e:
+#             print(f"DB READ ERROR: {e}", flush=True)
+#             return []
+
+#     def add_questions(self, topic, new_questions):
+#         clean_topic = topic.lower().strip()
+#         data_to_insert = []
+#         for q in new_questions:
+#             if isinstance(q, dict) and 'question' in q:
+#                 data_to_insert.append((clean_topic, q['question']))
+#             elif isinstance(q, str):
+#                 data_to_insert.append((clean_topic, q))
+#         try:
+#             with self.lock:
+#                 conn = self.get_db_connection()
+#                 cursor = conn.cursor()
+#                 cursor.executemany("INSERT INTO resume_evaluations (topic, data) VALUES (%s, %s)", data_to_insert)
+#                 conn.commit()
+#                 conn.close()
+#         except Exception as e: 
+#             print(f"DB WRITE ERROR: {e}", flush=True)
+
+#     def close(self):
+#         pass # Psycopg2 connections are opened and closed per request
+
+#     def _tokenize(self, text):
+#         if not text: return set()
+#         text = re.sub(r'[^\w\s]', '', text.lower())
+#         return set(word for word in text.split() if word not in self.STOPWORDS and len(word) > 2)
+
+#     def is_duplicate(self, new_question_text, past_questions, jaccard_threshold=0.45):
+#         if not new_question_text: return True
+#         new_tokens = self._tokenize(new_question_text)
+#         if len(new_tokens) < 3: return False 
+        
+#         for past_q in past_questions:
+#             clean_past = re.sub(r'[^\w\s]', '', past_q.lower().strip())
+#             clean_new = re.sub(r'[^\w\s]', '', new_question_text.lower().strip())
+            
+#             # Exact or Substring Match Detection
+#             if clean_new in clean_past or clean_past in clean_new:
+#                 print(f"\n🚫 [EXACT DUPLICATE DETECTED] Substring match found!", flush=True)
+#                 print(f"   NEW: '{new_question_text[:80]}...'", flush=True)
+#                 print(f"   OLD: '{past_q[:80]}...'", flush=True)
+#                 print("🔍 [TRACEBACK LOG] Where did this duplicate occur?", flush=True)
+#                 traceback.print_stack()
+#                 print("-" * 50, flush=True)
+#                 return True
+
+#             past_tokens = self._tokenize(past_q)
+#             intersection = new_tokens.intersection(past_tokens)
+#             union = new_tokens.union(past_tokens)
+#             if len(union) == 0: continue
+            
+#             similarity = len(intersection) / len(union)
+#             if similarity > jaccard_threshold:
+#                 print(f"\n🚫 [JACCARD DUPLICATE DETECTED] Similarity Score: {similarity:.2f}", flush=True)
+#                 print(f"   NEW: '{new_question_text[:80]}...'", flush=True)
+#                 print(f"   OLD: '{past_q[:80]}...'", flush=True)
+#                 print("🔍 [TRACEBACK LOG] Where did this duplicate occur?", flush=True)
+#                 traceback.print_stack()
+#                 print("-" * 50, flush=True)
+#                 return True
+                
+#         return False
+
+# history_system = HistoryManager()
+
+# ==============================================================================
+# 3. ROBUST HISTORY MANAGER (MongoDB Connection)
+# ==============================================================================
+
 class HistoryManager:
     STOPWORDS = {
         "the", "a", "an", "in", "on", "at", "to", "for", "of", "with", "by", 
@@ -306,65 +425,72 @@ class HistoryManager:
 
     def __init__(self):
         self.db_url = os.getenv("DATABASE_URL")
+        self.client = None
+        self.db = None
+        self.collection = None
         self.lock = threading.Lock() 
         self._initialize_db()
 
-    def get_db_connection(self):
-        conn = psycopg2.connect(self.db_url)
-        conn.autocommit = True
-        return conn
-
     def _initialize_db(self):
         try:
-            conn = self.get_db_connection()
-            cursor = conn.cursor()
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS resume_evaluations (
-                    id SERIAL PRIMARY KEY,
-                    topic TEXT,
-                    data TEXT,
-                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            ''')
-            conn.commit()
-            conn.close()
+            self.client = MongoClient(self.db_url)
+            self.db = self.client.get_default_database()
+            self.collection = self.db.resume_evaluations
+            self.collection.create_index("topic")
+            logging.info("MongoDB Connection Established for Resume History Manager.")
         except Exception as e: 
-            print(f"HISTORY INIT ERROR: {e}", flush=True)
+            print(f"HISTORY INIT ERROR (MongoDB): {e}", flush=True)
+            logging.error(f"HISTORY INIT ERROR (MongoDB): {e}")
 
     def get_past_questions(self, topic):
         clean_topic = topic.lower().strip()
         try:
             with self.lock: 
-                conn = self.get_db_connection()
-                cursor = conn.cursor()
-                cursor.execute("SELECT data FROM resume_evaluations WHERE topic = %s ORDER BY id DESC LIMIT 350", (clean_topic,))
-                results = [row[0] for row in cursor.fetchall()]
-                conn.close()
-                return results
+                cursor = self.collection.find({"topic": clean_topic}).sort("_id", DESCENDING).limit(350)
+                # Ensure we pull the text string for duplicate checking
+                return [doc.get("question", doc.get("data", "")) for doc in cursor]
         except Exception as e:
             print(f"DB READ ERROR: {e}", flush=True)
             return []
 
     def add_questions(self, topic, new_questions):
         clean_topic = topic.lower().strip()
-        data_to_insert = []
+        docs_to_insert = []
+        
         for q in new_questions:
             if isinstance(q, dict) and 'question' in q:
-                data_to_insert.append((clean_topic, q['question']))
+                # 🔥 CRITICAL RESTORE: Save the full dictionary structure
+                doc = q.copy()
+                doc.update({
+                    "topic": clean_topic,
+                    "timestamp": datetime.now(timezone.utc)
+                })
+                docs_to_insert.append(doc)
+                
+                # 📝 LOGGING: Print the Q&A explicitly to the console and log file
+                log_msg = f"Logged Interview Question: {q['question'][:100]}..."
+                print(log_msg, flush=True)
+                logging.info(log_msg)
+                
             elif isinstance(q, str):
-                data_to_insert.append((clean_topic, q))
+                docs_to_insert.append({
+                    "topic": clean_topic,
+                    "question": q,
+                    "timestamp": datetime.now(timezone.utc)
+                })
+                print(f"Logged Interview Question: {q[:100]}...", flush=True)
+                
         try:
-            with self.lock:
-                conn = self.get_db_connection()
-                cursor = conn.cursor()
-                cursor.executemany("INSERT INTO resume_evaluations (topic, data) VALUES (%s, %s)", data_to_insert)
-                conn.commit()
-                conn.close()
+            if docs_to_insert:
+                with self.lock:
+                    self.collection.insert_many(docs_to_insert)
         except Exception as e: 
             print(f"DB WRITE ERROR: {e}", flush=True)
+            logging.error(f"DB WRITE ERROR: {e}")
 
     def close(self):
-        pass # Psycopg2 connections are opened and closed per request
+        if self.client:
+            self.client.close()
 
     def _tokenize(self, text):
         if not text: return set()
@@ -380,14 +506,11 @@ class HistoryManager:
             clean_past = re.sub(r'[^\w\s]', '', past_q.lower().strip())
             clean_new = re.sub(r'[^\w\s]', '', new_question_text.lower().strip())
             
-            # Exact or Substring Match Detection
             if clean_new in clean_past or clean_past in clean_new:
                 print(f"\n🚫 [EXACT DUPLICATE DETECTED] Substring match found!", flush=True)
                 print(f"   NEW: '{new_question_text[:80]}...'", flush=True)
                 print(f"   OLD: '{past_q[:80]}...'", flush=True)
-                print("🔍 [TRACEBACK LOG] Where did this duplicate occur?", flush=True)
                 traceback.print_stack()
-                print("-" * 50, flush=True)
                 return True
 
             past_tokens = self._tokenize(past_q)
@@ -400,15 +523,12 @@ class HistoryManager:
                 print(f"\n🚫 [JACCARD DUPLICATE DETECTED] Similarity Score: {similarity:.2f}", flush=True)
                 print(f"   NEW: '{new_question_text[:80]}...'", flush=True)
                 print(f"   OLD: '{past_q[:80]}...'", flush=True)
-                print("🔍 [TRACEBACK LOG] Where did this duplicate occur?", flush=True)
                 traceback.print_stack()
-                print("-" * 50, flush=True)
                 return True
                 
         return False
 
 history_system = HistoryManager()
-
 # ==============================================================================
 # 4. CORE ENGINE: SYNCHRONOUS TIMEOUT ENFORCER & 2-STAGE FAILOVER
 # ==============================================================================

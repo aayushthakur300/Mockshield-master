@@ -48,7 +48,7 @@ app.use(cors({
 
 // 4. Health Check Route (Fixes the "Cannot GET /" error)
 app.get('/', (req, res) => {
-  res.send('Mockshield Node API is running! 🚀');
+  res.send('Mockshield Node API is running with MongoDB! 🚀');
 });
 
 // 5. Routes

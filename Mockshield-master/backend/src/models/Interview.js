@@ -29,33 +29,28 @@
 
 // module.exports = Interview;
 //-------------------------------------------------------------------------------
-const { DataTypes } = require('sequelize');
-const { sequelize } = require('../config/db');
-const User = require('./User');
+const mongoose = require('mongoose');
 
-const Interview = sequelize.define('Interview', {
-  id: {
-    type: DataTypes.INTEGER,
-    autoIncrement: true,
-    primaryKey: true
+const InterviewSchema = new mongoose.Schema({
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
   },
-  // We store the list of questions/answers as a JSON object in Postgres
   questions_data: {
-    type: DataTypes.JSONB, 
-    allowNull: false
+    type: mongoose.Schema.Types.Mixed, 
+    required: true
   },
   overall_feedback: {
-    type: DataTypes.TEXT,
-    allowNull: true
+    type: String,
+    default: ''
   },
   total_score: {
-    type: DataTypes.FLOAT,
-    defaultValue: 0.0
+    type: Number,
+    default: 0.0
   }
+}, {
+  timestamps: true
 });
 
-// Setup Relationship
-User.hasMany(Interview, { foreignKey: 'userId' });
-Interview.belongsTo(User, { foreignKey: 'userId' });
-
-module.exports = Interview;
+module.exports = mongoose.model('Interview', InterviewSchema);

@@ -12,6 +12,7 @@ import json
 import uuid
 import traceback  # <--- CRITICAL IMPORT FOR DEBUGGING
 from datetime import datetime
+from pymongo import MongoClient
 import re
 
 # --- 2. IMPORT AI ENGINES ---
@@ -48,7 +49,11 @@ app = FastAPI()
 # )
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://mockshield-20.vercel.app"], # YOUR EXACT VERCEL URL
+    allow_origins=["https://mockshield-20.vercel.app", # Your production URL
+                   "http://localhost:5173",            # Your local Vite frontend
+                   "http://localhost:3000",
+                   "http://localhost:5000",
+                   ],             # Standard React fallback], # YOUR EXACT VERCEL URL
     allow_credentials=True, # NOW SAFE TO BE TRUE
     allow_methods=["*"],
     allow_headers=["*"],
@@ -56,17 +61,29 @@ app.add_middleware(
 # ==========================================
 #  DATABASE UTILS (JSON FILE)
 # ==========================================
-DB_FILE = "db.json"
+# DB_FILE = "db.json"
 
-def load_db():
-    if not os.path.exists(DB_FILE): return []
-    try:
-        with open(DB_FILE, "r") as f: return json.load(f)
-    except: return []
+# def load_db():
+#     if not os.path.exists(DB_FILE): return []
+#     try:
+#         with open(DB_FILE, "r") as f: return json.load(f)
+#     except: return []
 
-def save_db(data):
-    with open(DB_FILE, "w") as f: json.dump(data, f, indent=4)
+# def save_db(data):
+#     with open(DB_FILE, "w") as f: json.dump(data, f, indent=4)
 
+# ==============================================================================
+# ☁️ MONGODB SESSION STORAGE (RENDER-PROOF)
+# ==============================================================================
+try:
+    # Connect to the exact same database used by your AI History Engine
+    session_client = MongoClient(os.getenv("DATABASE_URL"))
+    session_db = session_client.get_default_database()
+    sessions_collection = session_db.user_interviews
+    print("✅ MONGODB: User Sessions connected successfully.", flush=True)
+except Exception as e:
+    print(f"❌ MONGODB CONNECTION ERROR: {e}", flush=True)
+    
 # ==========================================
 #  DATA MODELS
 # ==========================================
@@ -341,27 +358,94 @@ def chat_endpoint(req: ChatRequest):
         traceback.print_exc()
         return {"reply": "A critical system error occurred. Check the backend terminal."}   
 
+# # ==========================================
+# #  DB ROUTES (HISTORY)
+# # ==========================================
+# @app.post("/interviews")
+# async def save_interview(request: Request):
+#     try:
+#         data = await request.json()
+#         db = load_db()
+        
+#         new_record = {
+#             "id": str(uuid.uuid4()),
+#             "createdAt": datetime.now().isoformat(),
+#             "topic": data.get("topic", "Interview Session"), 
+#             "total_score": data.get("score", 0), 
+#             "summary": data.get("summary", "No summary."),
+#             "full_data": data 
+#         }
+        
+#         db.insert(0, new_record) 
+#         save_db(db)
+#         print(f"💾 Saved Session: {new_record['id']}", flush=True)
+#         return {"message": "Saved", "id": new_record["id"]}
+#     except Exception as e:
+#         print(f"❌ Save DB Error: {e}", flush=True)
+#         traceback.print_exc()
+#         return {"error": "Failed to save session"}
+
+# @app.get("/interviews")
+# async def get_interviews():
+#     try:
+#         return load_db()
+#     except Exception as e:
+#         print(f"❌ Read DB Error: {e}", flush=True)
+#         traceback.print_exc()
+#         return []
+
+# @app.delete("/interviews/{id}")
+# async def delete_interview(id: str):
+#     try:
+#         db = load_db()
+#         new_db = [item for item in db if item["id"] != id]
+        
+#         if len(db) == len(new_db):
+#             raise HTTPException(status_code=404, detail="Session not found")
+        
+#         save_db(new_db)
+#         return {"message": "Deleted successfully"}
+#     except Exception as e:
+#         print(f"❌ Delete DB Error: {e}", flush=True)
+#         traceback.print_exc()
+#         return {"error": "Failed to delete"}
+
+# # --- NEW: CLEAR ALL HISTORY ENDPOINT ---
+# @app.delete("/api/sessions/clear")
+# async def clear_all_history():
+#     try:
+#         # Overwrite the JSON file with an empty list
+#         save_db([])
+#         print("🗑️ All interview history cleared successfully.", flush=True)
+#         return {"status": "success", "message": "All interview history permanently deleted."}
+#     except Exception as e:
+#         print(f"❌ Clear All DB Error: {e}", flush=True)
+#         traceback.print_exc()
+#         raise HTTPException(status_code=500, detail="Failed to clear history")
 # ==========================================
-#  DB ROUTES (HISTORY)
+#  DB ROUTES (HISTORY) - MONGODB INTEGRATION
 # ==========================================
 @app.post("/interviews")
 async def save_interview(request: Request):
     try:
         data = await request.json()
-        db = load_db()
+        
+        # Safely extract title
+        actual_topic = data.get("topic") or data.get("domain") or "General Interview"
         
         new_record = {
             "id": str(uuid.uuid4()),
             "createdAt": datetime.now().isoformat(),
-            "topic": data.get("topic", "Interview Session"), 
-            "total_score": data.get("score", 0), 
-            "summary": data.get("summary", "No summary."),
+            "topic": actual_topic,
+            "total_score": data.get("score") or data.get("totalScore") or 0, 
+            "summary": data.get("summary") or data.get("overallFeedback") or "No summary.",
             "full_data": data 
         }
         
-        db.insert(0, new_record) 
-        save_db(db)
-        print(f"💾 Saved Session: {new_record['id']}", flush=True)
+        # 🔥 FIX: Use MongoDB instead of load_db/save_db
+        sessions_collection.insert_one(new_record)
+        
+        print(f"💾 SAVED TO MONGO | ID: {new_record['id']}", flush=True)
         return {"message": "Saved", "id": new_record["id"]}
     except Exception as e:
         print(f"❌ Save DB Error: {e}", flush=True)
@@ -370,8 +454,11 @@ async def save_interview(request: Request):
 
 @app.get("/interviews")
 async def get_interviews():
+    print("\n🔄 DASHBOARD REFRESH: Fetching from MongoDB...", flush=True)
     try:
-        return load_db()
+        # 🔥 FIX: Query MongoDB directly and sort by newest first
+        records = list(sessions_collection.find({}, {"_id": 0}).sort("createdAt", -1))
+        return records
     except Exception as e:
         print(f"❌ Read DB Error: {e}", flush=True)
         traceback.print_exc()
@@ -380,13 +467,12 @@ async def get_interviews():
 @app.delete("/interviews/{id}")
 async def delete_interview(id: str):
     try:
-        db = load_db()
-        new_db = [item for item in db if item["id"] != id]
+        # 🔥 FIX: Delete from MongoDB directly
+        result = sessions_collection.delete_one({"id": id})
         
-        if len(db) == len(new_db):
+        if result.deleted_count == 0:
             raise HTTPException(status_code=404, detail="Session not found")
         
-        save_db(new_db)
         return {"message": "Deleted successfully"}
     except Exception as e:
         print(f"❌ Delete DB Error: {e}", flush=True)
@@ -397,15 +483,21 @@ async def delete_interview(id: str):
 @app.delete("/api/sessions/clear")
 async def clear_all_history():
     try:
-        # Overwrite the JSON file with an empty list
-        save_db([])
-        print("🗑️ All interview history cleared successfully.", flush=True)
-        return {"status": "success", "message": "All interview history permanently deleted."}
+        # 🔥 FIX: Wipe the MongoDB collection
+        sessions_collection.delete_many({})
+        print("🗑️ All history cleared from MongoDB.", flush=True)
+        return {"status": "success", "message": "All history permanently deleted."}
     except Exception as e:
         print(f"❌ Clear All DB Error: {e}", flush=True)
         traceback.print_exc()
         raise HTTPException(status_code=500, detail="Failed to clear history")
 
+# --- STARTUP ---
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.getenv("PORT", 8000))
+    print(f"🚀 MockShield AI Engine Starting on Port {port}...", flush=True)
+    uvicorn.run(app, host="0.0.0.0", port=port)
 # --- STARTUP ---
 if __name__ == "__main__":
     import uvicorn

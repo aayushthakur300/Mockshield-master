@@ -42,7 +42,6 @@
 //   }
 // };
 //----------------------------------------------------------------------------------------------------
-// neon database
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -64,6 +63,7 @@ exports.register = async (req, res) => {
       res.json({ token });
     });
   } catch (err) {
+    console.error(err);
     res.status(500).send('Server error');
   }
 };
@@ -83,6 +83,7 @@ exports.login = async (req, res) => {
       res.json({ token });
     });
   } catch (err) {
+    console.error(err);
     res.status(500).send('Server error');
   }
 };
