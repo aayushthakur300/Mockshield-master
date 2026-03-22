@@ -591,10 +591,17 @@ const Dashboard = () => {
                           
                           {/* 1. Session Metadata */}
                           <div className="md:w-1/4 z-10 flex flex-col items-start">
-                              <span className="font-mono text-xs text-gray-400 block mb-1">
+                              {/* <span className="font-mono text-xs text-gray-400 block mb-1">
                                   {new Date(item.createdAt).toLocaleDateString()} • {new Date(item.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                              </span>
-                              
+                              </span> */}
+                            <span className="font-mono text-xs text-gray-400">
+                                {new Date(item.createdAt).toLocaleDateString('en-IN', { 
+                                    timeZone: 'Asia/Kolkata', 
+                                    day: '2-digit', 
+                                    month: '2-digit', 
+                                    year: 'numeric' 
+                                })}
+                            </span>  
                               <h4 className="font-black text-lg leading-tight text-slate-800 group-hover:text-blue-600 transition-colors uppercase break-words">
                                   {getTopicDisplay(item)}
                               </h4>

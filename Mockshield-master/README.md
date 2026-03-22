@@ -8,7 +8,7 @@ The platform integrates:
 
 🧩 Deterministic JSON schema enforcement
 
-🗄 PostgreSQL-based persistent storage
+🗄 Mongo DV  storage
 
 🔁 Automated failover handling
 
@@ -71,7 +71,7 @@ Architected adhering to strict **Domain-Driven Design (DDD)** principles within 
 
 ### Persistence Layer
 
-* PostgreSQL (ACID-compliant RDBMS)
+* Mongo DB
 * Connection Pooling for High Throughput
 
 ---
@@ -146,18 +146,20 @@ Architected adhering to strict **Domain-Driven Design (DDD)** principles within 
   * Independent scaling
   * Fault isolation
 
-### PostgreSQL over NoSQL
+### MongoDB (NoSQL Architecture)
+# Enforces:
 
-* Enforces:
+* High Velocity Data Throughput (Optimized for rapid AI-generated writes)
 
-  * ACID compliance
-  * Referential integrity
-* Maintains strict relations between:
+* Document-Level Atomicity (Ensures ACID compliance per interview record)
 
-  * Candidate Profiles
-  * Audit Logs
-  * Assessment Metrics
+# Maintains unified, high-speed documents for:
 
+* Candidate Profiles (Stored as flexible, root documents)
+
+* Audit Logs (Embedded directly for real-time integrity tracking)
+
+* Assessment Metrics (Nested BSON for instant report retrieval)
 ### Edge-Computing Proctoring
 
 * Processing shifted to browser:
@@ -174,7 +176,7 @@ Ensure environment setup:
 
 * Node.js (v18+)
 * Python (3.10+)
-* PostgreSQL (Local / Cloud)
+* Mongo DB (Local / Cloud)
 * Git
 
 ---
@@ -184,8 +186,8 @@ Ensure environment setup:
 ### 1. Node.js Backend (`backend/.env`)
 
 ```
-DATABASE_URL=postgresql://<username>:<password>@localhost:5432/mockshield
-PORT=5000
+DATABASE_URL=mongodb+srv://<username>:<password>@cluster0.xxxxx.mongodb.net/mockshield?retryWrites=true&w=majority
+PORT=8000
 ```
 
 ### 2. Python AI Engine (`ai-engine/.env`)
@@ -248,7 +250,7 @@ npm run dev
 
 ### Database Tier
 
-* Supabase / AWS RDS (Managed PostgreSQL)
+* Mongo DB Atlas
 
 ### Core API Gateway
 
@@ -311,12 +313,13 @@ pytest tests/
 
 ### Database Lock Contention
 
-* Issue: High concurrency → connection pool exhaustion
+* Issue: Simultaneous AI writes → Operation queuing/  latency
+
 * Solution:
 
-  * Redis caching layer
-  * RabbitMQ queue system
-  * Async DB writes
+  * Distributed Redis caching
+  * Event-driven buffer system
+  * Asynchronous non-blocking writes
 
 ---
 
