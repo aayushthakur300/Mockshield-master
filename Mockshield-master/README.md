@@ -8,7 +8,7 @@ The platform integrates:
 
 🧩 Deterministic JSON schema enforcement
 
-🗄 Mongo DV  storage
+🗄 MongoDB storage
 
 🔁 Automated failover handling
 
@@ -71,7 +71,7 @@ Architected adhering to strict **Domain-Driven Design (DDD)** principles within 
 
 ### Persistence Layer
 
-* Mongo DB
+* MongoDB
 * Connection Pooling for High Throughput
 
 ---
@@ -102,7 +102,7 @@ Architected adhering to strict **Domain-Driven Design (DDD)** principles within 
 
   * Request validation
   * Stateless session handling
-  * Initial audit logging → PostgreSQL
+  * Initial audit logging → MongoDB
 
 #### 3. LLM Orchestration (The Gauntlet)
 
@@ -127,7 +127,7 @@ Architected adhering to strict **Domain-Driven Design (DDD)** principles within 
 * Combined with:
 
   * Proctoring integrity score
-* Stored in PostgreSQL
+* Stored in MongoDB
 * Frontend:
 
   * Fetches synthesized JSON
@@ -176,7 +176,7 @@ Ensure environment setup:
 
 * Node.js (v18+)
 * Python (3.10+)
-* Mongo DB (Local / Cloud)
+* MongoDB (Local / Cloud)
 * Git
 
 ---
@@ -213,7 +213,7 @@ npm install
 npm start
 ```
 
-✅ Expected Log: PostgreSQL Connected Successfully
+✅ Expected Log: MongoDB Connected Successfully
 
 ---
 
@@ -250,7 +250,7 @@ npm run dev
 
 ### Database Tier
 
-* Mongo DB Atlas
+* MongoDB Atlas
 
 ### Core API Gateway
 
@@ -354,4 +354,3 @@ Microservice isolation
 Structured persistence strategy
 
 Defensive JSON validation
-
